@@ -17,6 +17,37 @@ List<InvoiceDetailTransaction> getInvoiceDetailTransactions(@Param("request")Inv
 
 
 
+
+
+Bean class for mulActRowCount
+public abstract class MultiAccountRequest extends BaseAction2Request{
+
+    @JsonIgnore
+    private BigDecimal mulActRowCount;
+
+    public MultiAccountRequest(String requestedUser, TPHAction action) {
+        super(requestedUser, action);
+    }
+
+    @JsonIgnore
+    public BigDecimal getMulActRowCount() {
+        return mulActRowCount;
+    }
+
+    @JsonIgnore
+    public void setMulActRowCount(BigDecimal mulActRowCount) {
+        this.mulActRowCount = mulActRowCount;
+    }
+    
+    public abstract Object getRequestObject();	
+
+}
+
+
+
+
+
+
 InvoiceEntryService.java [ there are two methods where the SP is used one being public & private ] 
 
 public List<InvoiceDetailTransaction> getInvoiceDetailTransactions(String company, String account, String site, 
