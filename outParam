@@ -1,0 +1,123 @@
+I want to display the outParam [ mulActRowCount ] from below mentinoed SP 
+
+Mapper.xml
+<select id="getInvoiceDetailTransactions" resultMap="invoiceDetailsTransactionsMap">
+		{CALL CBQTPH031_INVOICE_TRANSACTIONS
+			(#{request.json,jdbcType=CHAR,mode=IN}, 
+			  #{request.mulActRowCount,jdbcType=DECIMAL,mode=OUT}, 
+			  #{request.returnStatus,jdbcType=CHAR,mode=OUT}, 
+			  #{request.returnErrorMsg,jdbcType=CHAR,mode=OUT})}
+	</select>
+
+
+InvoiceEntryDao.java
+
+List<InvoiceDetailTransaction> getInvoiceDetailTransactions(@Param("request")InvoiceDetailsTransactionsRequest request);
+
+
+
+
+InvoiceEntryService.java [ there are two methods where the SP is used one being public & private ] 
+
+public List<InvoiceDetailTransaction> getInvoiceDetailTransactions(String company, String account, String site, 
+			String container, String invoiceNumber, String vendorNumber, String vendorType){
+		
+		return getTransactions(company, account, site, container, invoiceNumber, vendorNumber, vendorType, TPHAction.GET_ALL);
+	}
+
+	private List<InvoiceDetailTransaction> getTransactions(String company, String account, String site, 
+			String container, String invoiceNumber, String vendorNumber, String vendorType, TPHAction action){
+		String user = SecurityUtils.getLoggedInUser();
+		InvoiceDetailsTransactionsRequest request = new InvoiceDetailsTransactionsRequest(user, action, company, account, site, container);
+		request.setVendorInvoiceNumber(invoiceNumber);
+		request.setVendorNumber(vendorNumber);
+		request.setVendorType(vendorType);
+		
+		logJson(request);
+		List<InvoiceDetailTransaction> trans = this.invoiceEntryDao.getInvoiceDetailTransactions(request);
+	
+		this.logResult(request);
+		
+		return trans;
+	}
+
+
+
+
+
+invoiceEntryController.java 
+@RequestMapping(value= {"/{company}/{account}/{site}/{container}/{vendornumber}/{vendorsubtypw}/{invoice}/{invoiceDate}/{invoiceAmount:.+}"}, 
+			method = RequestMethod.GET)
+	public String invoiceDetail(Model model, @PathVariable("invoice")String invoiceNumber, 
+			@PathVariable("company")String company, 
+			@PathVariable("account")String account, 
+			@PathVariable("site")String site,
+			@PathVariable("container")String container, 
+			@PathVariable("vendornumber")String vendorNumber, 
+			@PathVariable("vendorsubtypw")String vendorSubType,
+			@PathVariable("invoiceDate")String invoiceDate,
+			@PathVariable("invoiceAmount")String invoiceAmount
+			) throws NumberFormatException, ParseException, JsonProcessingException {
+
+		Customer customer = this.customerService.getCustomerSiteDetail(company, account, site, container);
+		InvoiceHeader headerRec = this.invoiceEntryService.getInvoiceHeader(invoiceNumber, vendorNumber, vendorSubType, DateUtil.convertToAs400DateFormat(invoiceDate), Double.parseDouble(invoiceAmount));
+		List<InvoiceDetailTransaction> transactions = this.invoiceEntryService.getInvoiceDetailTransactions(company, account, site, container, invoiceNumber, vendorNumber, vendorSubType);
+		
+		ProcessingIssueParams params = new ProcessingIssueParams();
+		params.setVendorNumber(vendorNumber);
+		params.setVendorAddrType(vendorSubType);
+		params.setInvoiceNumber(invoiceNumber);
+		params.setInvoiceDate(invoiceDate); 
+
+		List<ProcessingIssueResult> issues = this.invoiceEntryService.searchProcessingIssues(params);
+		Collections.sort(issues, Comparator.comparing(ProcessingIssueResult::getCompleteDate, Comparator.nullsFirst(Comparator.reverseOrder())));
+		model.addAttribute("issues", issues);
+		
+		ProcessingIssueCountParams countParams = new ProcessingIssueCountParams();
+		countParams.setVendorNumber(vendorNumber);
+		countParams.setVendorAddrType(vendorSubType);
+		countParams.setInvoiceNumber(invoiceNumber);
+		countParams.setInvoiceDate(invoiceDate); 
+
+		model.addAttribute("issueCount", this.invoiceEntryService.searchProcessingIssueCount(countParams));
+		
+		if(transactions == null || transactions.isEmpty()) {
+			transactions = new ArrayList<>();
+			transactions.add(new InvoiceDetailTransaction());
+		}
+			
+		if(headerRec != null && !"RVW".equalsIgnoreCase(headerRec.getInvoiceStatus())) {
+			List<InvoiceContainer> invContainers = this.invoiceEntryService.getInvoiceContainers(company, account, site, container, 
+					vendorNumber, vendorSubType);
+			
+			List<AccountInvoiceHistory> invHistoryList = this.invoiceEntryService.getAccountInvoiceHistory(account);//7 chars
+			List<ChargeCode> fullchargeCodes = this.chargeCodesService.getFullchargeAccountChargeCodes(company, account, site, "0");
+			List<ChargeCode> nonBillCodes = this.chargeCodesService.getNonBillChargeCodes(company, account);
+			
+			model.addAttribute("invoiceContainers", invContainers);
+			model.addAttribute("invHistoryList", invHistoryList);
+			model.addAttribute("fullchargeCodes", fullchargeCodes);
+			model.addAttribute("nonBillCodes", nonBillCodes);
+		}
+	
+		model.addAttribute(INVOICE_AMOUNT, invoiceAmount);
+		model.addAttribute(COMPANY, company);
+		model.addAttribute(ACCOUNT, account);
+		model.addAttribute(SITE, site);
+		model.addAttribute(CONTAINER, container);
+		model.addAttribute("vendorSubType",vendorSubType);
+		model.addAttribute("customer", customer);
+		model.addAttribute(HEADER_REC, headerRec);
+		model.addAttribute(NOTES_URL, this.invoiceEntryService.getVendorNotesLink(vendorNumber, vendorSubType));
+		model.addAttribute(TRANSACTIONS, transactions);
+		
+		InvoiceTotalsDto totals = this.invoiceEntryService.getInvoiceTotals(invoiceNumber, vendorNumber, vendorSubType);
+		
+		model.addAttribute("totalPaidToHauler", totals.getPaidToHauler());
+		model.addAttribute("totalInvoicedFromHauler", totals.getInvoicedFromHauler());
+		
+		return "invoice_entry/invoice_detail";
+	}
+	
+	
+
