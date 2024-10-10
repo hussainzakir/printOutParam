@@ -2,6 +2,19 @@ whenever we are adding two different accounts in the invoice_detail page the rec
 
 NOTE: the table were we select the accounts is in inc_detail_transactions_write.jsp file and  update button and the logic reside in the invoice_detail.jsp page
 
+####    line 946 doupdate method  #######
+
+CONSOLE RESULT : 
+
+1
+AJAX entered
+1
+2
+4 : AJAX after submit
+5: AJAX exited
+
+
+
 inc_detail_transactions_write.jsp file
 
 <%@ taglib prefix="c" uri="http://java.sun.com/jstl/core_rt" %>
