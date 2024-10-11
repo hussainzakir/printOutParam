@@ -18,79 +18,214 @@ AJAX entered
 inc_detail_transactions_write.jsp file
 
 <%@ taglib prefix="c" uri="http://java.sun.com/jstl/core_rt" %>
-<table class="table table-center-alltable-sm table-no-top-border table-font-md detailInputTable" aria-describedby="resultTable">
+<style>
+table.vertical-align > tbody > tr > td {
+vertical-align: middle;
+}
+</style>
+<form id="detailForm" method="post" name="detailForm" onsubmit="return doUpdate();" action="${requestScope['javax.servlet.forward.request_uri']}">
+<input type="hidden" name="headerInvoiceStatus" value="${headerRec.invoiceStatus}"/>
+<table id="writeTable" aria-describedby="writeTable" class="table table-center-alltable-sm table-no-top-border table-font-md detailInputTable table-sm table-borderless vertical-align" 
+	style="border-collapse: separate; border-spacing:0 6px;">
 	<thead >
-		<tr>
+		<tr class="border_bottom">
 			<th scope="col">
-				<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input selectAll" id="selectAll" >
-              	<label class="custom-control-label" for="selectAll"></label></div>
+				<input type="checkbox" class=" selectAll" id="selectAll" >
             </th>
             <c:if test="${multipleAccounts }">
             <th scope="col" class="text-center">Account</th>
             <th scope="col" class="text-center">Site</th>
             </c:if>
-			<th scope="col" class="text-center">Container Grp</th>
-			<th scope="col" class="text-center">Ur-file Seq<br/>Number</th>
-			<th scope="col" class="text-center">None UR#<br/>Type</th>
-			<th scope="col" class="text-center">Entry<br/>Date</th>
+			<th scope="col" class="text-center">Container Description</th>
+			<th scope="col" class="text-center">Charge<br/>Type</th>
+			<th scope="col" class="text-center">Service<br/>Date</th>
 			<th scope="col" class="text-center">Service<br/>Code</th>
-			<th scope="col" class="text-center">Charge<br/>Code</th>
-			<th scope="col" class="text-center">PO<br/>Number</th>
+			<th scope="col" class="text-center">Charge Code</th>
+			<th scope="col" class="text-center">Customer<br/>PO #</th>
 			<th scope="col" class="text-center">Disposal<br/>Volume</th>
-			<th scope="col" class="text-center">Volume<br/>Code</th>
-			<th scope="col" class="text-center">Amt. To Be<br/>Invoiced</th>
-			<th scope="col" class="text-center">Amt.<br/>Invoiced</th>
-			<th scope="col" class="text-center">Amt. To Be<br/>Paid</th>
-			<th scope="col" class="text-center">Difference<br/>Type</th>
-			<th scope="col" class="text-center">Invoice<br/>Ref #</th>
-			<th scope="col" class="text-center">Session #</th>
-			<th scope="col" class="text-center">P/L Posted<br/>Month</th>
-			<th scope="col" class="text-center">P/L Posted<br/>Year</th>
-			<th scope="col" class="text-center">P/L Error<br/>Message ID</th>
-			<th scope="col" class="text-center">Last Update<br/>Date</th>
-			<th scope="col" class="text-center">Creation<br/>Date</th>
+			<th scope="col" class="text-center">Disposal<br/>Unit of Measure</th>
+			<th scope="col" class="text-center">Amt Inv<br/>from<br/>Hauler</th>
+			<th scope="col" class="text-center">Amt to be<br/>Paid to<br/>Hauler</th>
+			<c:if test="${multipleAccounts }">
+			<th scope="col" class="text-center">Bulk<br/>Mode</th>
+			<th scope="col" class="text-center">Row<br/>Identifier</th>
+			</c:if>
+			<th scope="col">&nbsp;</th>
 		</tr>
 	</thead>
 	<tbody>
-	<c:forEach var="transaction" items="${transactions }">
-	<c:set var="rowClass" value=""/>
-	<c:choose>
-		<c:when test="${transaction.uiIdentifier eq 'EDI Transaction'}"><c:set var="rowClass" value="table-ediRow"/></c:when>
-		<c:when test="${transaction.uiIdentifier eq 'AutoPay'}"><c:set var="rowClass" value="table-autoPayRow"/></c:when>
-		<c:when test="${transaction.uiIdentifier eq 'eInvoice Transaction'}"><c:set var="rowClass" value="table-eInvoiceRow"/></c:when>
-	</c:choose>
-		<tr id="templateRow" class="${rowClass}">
-			<td>&nbsp;</td>
-			<c:if test="${multipleAccounts }">
-			<td><c:out value="${transaction.account }"/></td>
-			<td><c:out value="${transaction.site }"/></td>
-			</c:if>
-			<td><c:out value="${transaction.containerDescription }"/></td>
-			<td><c:out value="${transaction.urSequenceNumber eq '0' ? '' : transaction.urSequenceNumber }"/></td>
-			<td><c:out value="${transaction.noneUrNumberType}"/></td>
-			<td><c:out value="${transaction.serviceDate}"/></td>
-			<td><c:out value="${transaction.serviceCode}"/></td>
-			<td><c:out value="${transaction.chargeCodeDescription}"/></td>
-			<td><c:out value="${transaction.poNumber}"/></td>
-			<td><c:out value="${transaction.disposalVolume}"/></td>
-			<td><c:out value="${transaction.volumeCode}"/></td>
-			<td><c:out value="${transaction.amountToBeInvoiced}"/></td>
-			<td><c:out value="${transaction.amountInvoicedFromHauler}"/></td>
-			<td><c:out value="${transaction.amountToBePaidToHauler}"/></td>
-			<td><c:out value="${transaction.differenceType}"/></td>
-			<td><c:out value="${transaction.invoiceRefNumber}"/></td>
-			<td><c:out value="${transaction.sessionNumber}"/></td>
-			<td><c:out value="${transaction.plPostedMonth}"/></td>
-			<td><c:out value="${transaction.plPostedYear}"/></td>
-			<td><c:out value="${transaction.plErrorMessageId}"/></td>
-			<td><c:out value="${transaction.lastUpdateDate}"/></td>
-			<td><c:out value="${transaction.creationDate}"/></td>
-		</tr>
-		<c:set value="${amountInvoicedFromHauler +  transaction.amountInvoicedFromHauler }" var="amountInvoicedFromHauler"  scope="request" />
-		<c:set value="${amountToBePaidToHauler +  transaction.amountToBePaidToHauler}" var="amountToBePaidToHauler"  scope="request" />
+	<c:set var="containerChains" value=""/>
+	<c:set var="containerNonBillChains" value="-1+-1"/>
+	<c:set var="containerFullChargeChains" value="-1+-1"/>
+	<c:set var="urContainerTypeChains" value="-1+-1"/>
+
+	<c:forEach var="container" items="${invoiceContainers }" varStatus="loop">
+    	<c:set var="containerChains" value="${container.container} ${containerChains}"/>
+    	<c:set var="containerNonBillChains" value="${container.container}+Non_Bill ${containerNonBillChains}"/>
+    	<c:set var="containerFullChargeChains" value="${container.container}+Full_Charge ${containerFullChargeChains}"/>
+    	<c:set var="urContainerTypeChains" value="${container.container}+-1 ${urContainerTypeChains}"/>
+    	<c:forEach items="${container.containerDetails }" var="containerDetail" varStatus="loop">
+    	<c:forEach var="chargeCode" items="${containerDetail.chargeCodes }">
+    	<c:set var="urContainerTypeChains" value="${container.container}+${containerDetail.urNumber} ${urContainerTypeChains}"/>
+    	</c:forEach>
+    	</c:forEach>
 	</c:forEach>
+	
+	<c:forEach var="transaction" items="${transactions }" varStatus="iterStatus">
+		<c:set var="rowClass" value=""/>
+		<c:choose>
+			<c:when test="${transaction.uiIdentifier eq 'EDI Transaction'}"><c:set var="rowClass" value="table-ediRow"/></c:when>
+			<c:when test="${transaction.uiIdentifier eq 'AutoPay'}"><c:set var="rowClass" value="table-autoPayRow"/></c:when>
+			<c:when test="${transaction.uiIdentifier eq 'eInvoice Transaction'}"><c:set var="rowClass" value="table-eInvoiceRow"/></c:when>
+		</c:choose>
+		<tr  class="${rowClass }" id="row${iterStatus.count -1 }">
+			<td class="text-center">
+				<input type="checkbox" name="invoiceEntry[${iterStatus.count -1 }].selected"  data-varname="selected" value="true">
+				<input type="hidden" name="invoiceEntry[${iterStatus.count -1 }].update" value="${not empty transaction.container }" data-varname="update">
+				<input type="hidden" name="invoiceEntry[${iterStatus.count -1 }].ediTransaction" value="${transaction.uiIdentifier eq 'EDI Transaction'}" data-varname="ediTransaction">
+				<input type="hidden" name="invoiceEntry[${iterStatus.count -1 }].transactionId" value="${transaction.transactionId}" data-varname="transactionId">
+				
+            </td>
+            <c:if test="${multipleAccounts }">
+            <td>
+				<select class="invAccount" data-rownum="${iterStatus.count -1 }" data-varname="bulkKey.account" name="invoiceEntry[${iterStatus.count -1 }].bulkKey.account" id="invoiceEntry${iterStatus.count -1 }bulkKey.account">
+				<option value="-1">&nbsp;</option>
+            	<c:forEach items="${acctIds }" var="item">
+					<option ${transaction.account eq item ? 'selected' :'' } value="${item }">${item }</option>
+				</c:forEach>
+				</select>
+            </td>
+            <td>
+	            <select class="invSite" data-rownum="${iterStatus.count -1 }" data-varname="bulkKey.site" name="invoiceEntry[${iterStatus.count -1 }].bulkKey.site" id="invoiceEntry${iterStatus.count -1 }bulkKey.site">
+					<option value="-1">&nbsp;</option>
+		            <c:forEach var="site" items="${siteAccountMaps }">
+						<c:set var="accounts" value="${site.value}"/>
+						<c:set var="acctChain" value=""/>
+						<c:set var="acctSiteChain" value=""/>
+						<c:forEach var="acct" items="${accounts}">
+							<c:set var="acctChain" value="${acct} ${acctChain}"/>
+							<c:set var="acctSiteChain" value="${acct}+${site.key } ${acctSiteChain}"/>
+					    </c:forEach>
+						<option value="${site.key }" data-chained="${acctChain }" ${transaction.site eq site.key ? 'selected' :'' }>${site.key }</option>
+					</c:forEach>
+				</select>
+            </td>
+            </c:if>
+			<td>
+				<select class="invContainer" data-rownum="${iterStatus.count -1 }" data-varname="container" name="invoiceEntry[${iterStatus.count -1 }].container" id="invoiceEntry${iterStatus.count -1 }container">
+					<option value="-1" data-chained="-1+-1 -1 ${acctSiteChain }">&nbsp;</option>
+					<c:forEach var="container" items="${invoiceContainers }">
+					<c:if test="${transaction.container eq container.container}">
+					<c:set var="selectedContainer" value="${container }"/>
+					</c:if>
+					<c:set var="containerStatus" value="${container.containerCloseDate eq '0001-01-01' ? ' - Active' : ' - Inactive'}" />
+					<option data-chained="${container.account }"
+						${transaction.container eq container.container ? 'selected' :'' } 
+						value="${container.container }"
+						data-containertype="${container.containerType }"
+						data-containersize="${container.containerSize }"
+						data-compactor="${container.compactorflag }">${container.container } <c:out value="${container.containerDescription } ${containerStatus }"/></option>
+					</c:forEach>
+				</select>
+				<input type="hidden" value="${transaction.serviceSource }" data-varname="serviceSource" name="invoiceEntry[${iterStatus.count -1 }].serviceSource" id="invoiceEntry${iterStatus.count -1 }serviceSource" /> 
+				<input type="hidden" value="${selectedContainer.containerType }" data-varname="containerType" name="invoiceEntry[${iterStatus.count -1 }].containerType" id="invoiceEntry${iterStatus.count -1 }containerType" />
+				<input type="hidden" value="${selectedContainer.containerSize }" data-varname="containerSize" name="invoiceEntry[${iterStatus.count -1 }].containerSize" id="invoiceEntry${iterStatus.count -1 }containerSize" />
+				<input type="hidden" value="${selectedContainer.compactorflag }" data-varname="compactorFlag" name="invoiceEntry[${iterStatus.count -1 }].compactorFlag" id="invoiceEntry${iterStatus.count -1 }compactorFlag" />
+				<input type="hidden" value="${iterStatus.count -1 }" data-varname="uiRowNumber" name="invoiceEntry[${iterStatus.count -1}].uiRowNumber" id="invoiceEntry${iterStatus.count -1}uiRowNumber" />
+
+			</td>
+			<td>
+			<select class="chargeType" autocapitalize="none" data-varname="chargeType" name="invoiceEntry[${iterStatus.count -1 }].chargeType" id="invoiceEntry${iterStatus.count -1 }chargeType">
+					<option value="-1" data-chained="-1 ${containerChains }">&nbsp;</option>
+					<option value="Non_Bill" ${transaction.noneUrNumberType eq 'Non Bill' ? 'selected' : '' } data-chained="-1 ${containerChains }">Non Bill</option>
+					<option value="Full_Charge" ${transaction.noneUrNumberType eq 'Full Charge' ? 'selected' : '' } data-chained="-1 ${containerChains }">Full Charge</option>
+					<c:set var="selectedEffDate" value=""/>
+					<c:set var="urFound" value="${transaction.noneUrNumberType eq 'Non Bill' or (transaction.noneUrNumberType eq 'Full Charge') }"/>
+					<c:forEach var="container" items="${invoiceContainers }">
+					<c:forEach items="${container.containerDetails }" var="containerDetail" varStatus="loop">
+					<c:if test="${empty containerDetail.invoice or (containerDetail.invoice eq headerRec.invoiceNumber)}">
+					<option data-servicesource="${containerDetail.serviceSource}" data-customerpo="${containerDetail.scheduled }" data-servicedate="${containerDetail.serviceDate }" data-servicecode="${containerDetail.serviceCode }" ${containerDetail.urNumber eq transaction.noneUrNumberType ? 'selected=selected' : '' } value="${containerDetail.urNumber }" data-chained="${container.container }"><c:out value="${containerDetail.urNumber }"/></option>
+					<c:set var="urFound" value="${urFound or (containerDetail.urNumber eq transaction.noneUrNumberType) }"/>
+					<c:set var="urChains" value="${containerDetail.urNumber} ${urChains}"/>
+					</c:if>
+					</c:forEach>
+					</c:forEach>
+					<c:if test="${not urFound }">
+					<option data-servicesource="${transaction.serviceSource}" data-customerpo="" data-servicedate="${transaction.serviceDate }" 
+					data-servicecode="${transaction.serviceCode }" selected=selected value="${transaction.noneUrNumberType }" 
+					data-chained="${transaction.container }"><c:out value="${transaction.noneUrNumberType }"/></option>
+					</c:if>
+				</select>
+			</td>
+			<td><input class="datepicker" id="serviceDate" autocomplete="off" name="invoiceEntry[${iterStatus.count -1 }].serviceDate" type="text" value="${transaction.serviceDate }" size=10 data-varname="serviceDate"/></td>
+			<td><input type="text" value="${transaction.serviceCode }" name="invoiceEntry[${iterStatus.count -1 }].serviceCode" size=12 data-varname="serviceCode"/> </td>
+			<td>
+				<select style="width: 100%;" class="chargeCode" data-varname="chargeCode" name="invoiceEntry[${iterStatus.count -1 }].chargeCode" id="invoiceEntry${iterStatus.count -1 }chargeCode">
+<option value="-1" data-chained="-1+-1 -1 -1+Full_Charge -1+Non_Bill ${urChains } ${ containerNonBillChains} ${urContainerTypeChains} ${containerFullChargeChains}">&nbsp;</option>
+<c:set var="selectedEffDate" value=""/>
+<c:forEach var="fcCode" items="${fullchargeCodes }">
+<option data-effectivedate="${fcCode.effectiveDate}" value="${fcCode.code }" ${transaction.chargeCode eq fcCode.code ? 'selected' :'' } data-chained="${fcCode.container }+Full_Charge -1+-1"><c:out value="${fcCode.description }"/></option>
+<c:if test="${transaction.chargeCode eq fcCode.code }">
+	<c:set var="selectedEffDate" value="${fcCode.effectiveDate }"/>
+</c:if>
+</c:forEach>
+
+<c:set value="" var="nbType"/>
+<c:forEach var="nonBillCode" items="${nonBillCodes }" varStatus="nbStatus">
+<c:if test="${nbType ne nonBillCode.type and (not empty nbType)}"></optgroup></c:if>
+<c:if test="${nbType ne nonBillCode.type}"><optgroup label="${nonBillCode.type }" data-chained="${ containerNonBillChains}"></c:if>
+<c:set value="${nonBillCode.type }" var="nbType"/>
+<option value="${nonBillCode.code }" ${transaction.chargeCode eq nonBillCode.code ? 'selected' :'' } data-chained="${ containerNonBillChains}"><c:out value="${nonBillCode.description }"/> </option>
+<c:if test="${nbStatus.last }"></optgroup></c:if>
+</c:forEach>
+<c:forEach var="container" items="${invoiceContainers }">
+<c:forEach items="${container.containerDetails }" var="containerDetail" varStatus="loop">
+<c:forEach var="chargeCode" items="${containerDetail.chargeCodes }">
+<option ${transaction.chargeCode eq chargeCode.code ? 'selected' :'' } value="${chargeCode.code }" data-chained="${container.container}+${containerDetail.urNumber}"><c:out value="${chargeCode.description }"/></option>
+</c:forEach>
+</c:forEach>
+</c:forEach>
+<c:if test="${not urFound }">
+<option selected value="${transaction.chargeCode }" data-chained="${transaction.container}+${transaction.noneUrNumberType}"><c:out value="${transaction.chargeCodeDescription }"/></option>
+
+</c:if>
+</select>
+<input type="hidden" value="${selectedEffDate }" data-varname="effectiveDate" name="invoiceEntry[${iterStatus.count -1}].effectiveDate" id="invoiceEntry${iterStatus.count -1}effectiveDate" />
+			</td>
+			<td><input type="text" name="invoiceEntry[${iterStatus.count -1 }].customerPoNumber" size=12 data-varname="customerPoNumber" value="${transaction.customerPoNumber }"/></td>
+			<td><input type="text" name="invoiceEntry[${iterStatus.count -1 }].disposalVolume" size=6 data-varname="disposalVolume" value="${transaction.disposalVolume }"></td>
+			<td>
+			<select data-varname="disposalUom" name="invoiceEntry[${iterStatus.count -1 }].disposalUom">
+					<option  value="">&nbsp;</option>
+					<option ${transaction.disposalUom eq 'CA' ? 'selected' : '' } value="CA">CARTS</option>
+					<option ${transaction.disposalUom eq 'EA' ? 'selected' : '' } value="EA">EACH</option>
+					<option ${transaction.disposalUom eq 'GL' ? 'selected' : '' } value="GL">GALLONS</option>
+					<option ${transaction.disposalUom eq 'LD' ? 'selected' : '' } value="LD">LOAD</option>
+					<option ${transaction.disposalUom eq 'TN' ? 'selected' : '' } value="TN">TONS</option>
+					<option ${transaction.disposalUom eq 'YD' ? 'selected' : '' } value="YD">YARDS</option>
+				</select>
+			</td>
+			<td><input type="text" class="enterSubmittable"  name="invoiceEntry[${iterStatus.count -1 }].amtInvoicedFromHauler" size=12 data-varname="amtInvoicedFromHauler" value="${transaction.amountInvoicedFromHauler }"/></td>
+			<td><input type="text" class="enterSubmittable" name="invoiceEntry[${iterStatus.count -1 }].amtToBePaidToHauler" size=12 data-varname="amtToBePaidToHauler" value="${transaction.amountToBePaidToHauler }"/></td>
+			<c:set value="${amountInvoicedFromHauler +  transaction.amountInvoicedFromHauler }" var="amountInvoicedFromHauler"  scope="request" />
+			<c:set value="${amountToBePaidToHauler +  transaction.amountToBePaidToHauler}" var="amountToBePaidToHauler"  scope="request" />
+			<c:if test="${multipleAccounts }">
+			<td>
+				<select data-varname="bulkMode" name="invoiceEntry[${iterStatus.count -1 }].bulkMode">
+					<option ${transaction.bulkMode eq ' ' ? 'selected' : '' } value=" ">ADD</option>
+					<option ${transaction.bulkMode eq 'UPDATE' ? 'selected' : '' } value="UPDATE">UPDATE</option>
+				</select>
+			</td>
+			<td><input type="text" class="enterSubmittable"  name="invoiceEntry[${iterStatus.count -1 }].rowIdentifier" size=12 data-varname="rowIdentifier" value="${transaction.rowIdentifier }" readonly/></td>
+			</c:if>
+			<td>&nbsp;</td>
+		</tr>
+		</c:forEach>
 	</tbody>
 </table>
+</form>
+<div><a href="javascript: void(0);" onclick="addRows(15);">Add More</a></div>
+
 
 
 invoice_detail.jsp
