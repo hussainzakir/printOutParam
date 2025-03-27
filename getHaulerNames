@@ -1,0 +1,208 @@
+header.jsp [ user cicks vendor tools on header getvendorToolspage() method triggers to show invoiceScaning page ]
+
+ <li class="nav-item dropdown px-2">
+          <a id="dropdownMenu1" href="${pageContext.request.contextPath}/vendortools/invoicescanning" aria-expanded="false" class="nav-link">Vendor tools</a>
+</li>
+
+
+@Controller
+@RequestMapping("/vendortools")
+public class VendorToolsController {
+
+	@Autowired
+	private VendorToolsService vendorToolsService ;
+	
+	@RequestMapping(value="/invoicescanning", method = RequestMethod.GET)
+	public String getvendorToolspage(Model model) {
+	List<Vendor> haulers = vendorToolsService.getVendors();
+	System.out.println("HAULER LIST");
+	for(Vendor hauler : haulers) {
+		System.out.println(hauler.getVendorName());
+	}
+		model.addAttribute("haulers", haulers);
+		return "vendor_tools/invoiceScaning";
+	}
+	
+	@RequestMapping("/printBarcode")
+	    public ResponseEntity<Map<String, String>> printBarcode() {
+	        String barCodeValue = vendorToolsService.generateBarcode();
+	        System.out.println("Generated Barcode: " + barCodeValue);
+	        Map<String, String> response = new HashMap<>();
+	        response.put("barcode", barCodeValue);	        
+	        return ResponseEntity.ok(response);
+	    }
+}
+
+
+@Service("vendorToolsService")
+public class VendorToolsService {
+	@Autowired
+	private VendorToolsDao vendorToolsDao;
+	
+	public String generateBarcode() {
+		String user = SecurityUtils.getLoggedInUser();
+		VendorToolRequest request = new VendorToolRequest(TPHAction.GET_NXT_BAR_CODE, user);
+		vendorToolsDao.getBarodes(request);
+		
+		String nxtBarcode = request.getReturnNxtBarode();
+		System.out.println("BARCODE HERE : " + nxtBarcode);
+		
+		return nxtBarcode;
+	}
+	
+	public List<Vendor> getVendors(){
+		return this.vendorToolsDao.getHaulers();
+	}
+}
+
+public interface VendorToolsDao {
+	String getBarodes(@Param("request") BaseAction2Request request);
+	List<Vendor> getHaulers();	
+}
+
+mapper 
+<select id="getHaulers" resultMap="vendorNamesMap">
+{CALL CBQTPH013_GET_TPHVENDORS(?,?)}	
+</select>
+
+<resultMap id="vendorNamesMap" type="com.repsrv.tph2.model.Vendor">
+    <result column="VAADR1" javaType="string" property="haulerName" />
+    <result column="VAVEND" javaType="string" property="vendorType" />
+    <result column="VASTYP" javaType="string" property="vendorSubType" />
+</resultMap>
+
+
+
+MODEL 
+public class Vendor implements Serializable{
+	
+	private static final long serialVersionUID = 1L;
+	private String vendorType;
+	private String vendorName;
+	private String vendorSubType;
+	public Vendor() {}
+	public Vendor(String vendorType, String vendorName, String vendorSubType) {
+		// Added for JUnit Testing
+	}
+	public String getVendorType() {
+		return vendorType;
+	}
+	public void setVendorType(String vendorType) {
+		this.vendorType = vendorType;
+	}
+	public String getVendorName() {
+		return vendorName;
+	}
+	public void setVendorName(String vendorName) {
+		this.vendorName = vendorName;
+	}
+	public String getVendorSubType() {
+		return vendorSubType;
+	}
+	public void setVendorSubType(String vendorSubType) {
+	this.vendorSubType = vendorSubType;
+	}	
+}
+
+
+
+
+JSP PAGE 
+
+<div class="container-fluid py-4 font-small">
+    <h4>TPH Invoice Scanning</h4>
+    <div class="border-bottom my-5"></div>
+
+    <div class="form-group">
+        <div class="row">
+            <label class="col-3" for="shd-be-same">Bar Code Number&nbsp;&nbsp;</label>
+            <input class="col-3 form-control rsi-input" type="text" name="barCodeNumber" 
+                   id="barCodeNumber" disabled> &nbsp;&nbsp; 
+            <button type="button" class="btn rsibtn-orange btn-sm" id="generateBarcode">Generate</button>
+        </div>
+    </div>
+
+
+<!-- invoice scanning section -->
+    
+    <form id="invoiceScanningForm" class="uri_form" action="" method="post" >
+        <div class="form-group">
+            
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Invoice Date&nbsp;</label>
+                <input class="col-3 form-control rsi-input" type="date" name="invoiceDate" id="invoiceDate" required>
+            </div>    
+            
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Hauler Name&nbsp;&nbsp;</label>
+                <select class="form-control rsi-input col-3" name="haulerName" id="haulerName" required>
+                    <option value=""></option>
+                    <c:forEach var="hauler" items="${haulers}">
+                        <option value="${hauler.vendorSubType}" data-info="${hauler.vendorType}"><c:out value="${hauler.haulerName }"/></option>
+                    </c:forEach>	                  
+                    </select>        
+            </div>
+            <p>vendor list  <c:out value="${haulers}"/></p>
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Hauler Account Number&nbsp;</label>
+                <input class="col-3 form-control rsi-input" type="Number" name="haulerAccountNumber" id="haulerAccountNumber" required>
+            </div>
+
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Invoice Number&nbsp;&nbsp;</label>
+                <input class="col-3 form-control rsi-input"type="Number" name="invoiceNumber" id="invoiceNumber" required>
+            </div>
+
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Current Invoice Amount $&nbsp;</label>
+                <input class="col-3 form-control rsi-input"type="Number" name="currentInvoiceAmount" id="currentInvoiceAmount" required>
+            </div>
+
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Number of Pages&nbsp;&nbsp;</label>
+                <input class="col-3 form-control rsi-input"type="Number" name="numberOfPage" id="numberOfPage" required>
+            </div>
+            
+        </div>
+
+        <div class="row">
+        <div class="col-sm-1">
+            <input type="submit" class="btn rsibtn-orange btn-sm" value="Submit "/>
+        </div>
+        <div class="col-sm-1">
+            <input type="submit" class="btn rsibtn-orange btn-sm" value="Clear form "/>
+        </div>
+        </div>
+
+	</form>
+
+</div>
+
+<script src="${pageContext.request.contextPath}/static/js/jquery.chained.remote.min.js?34dsf5987"></script>
+
+<script>
+$(document).ready(function() {
+    $('#generateBarcode').click(function(event) {
+        event.preventDefault();
+        
+        $.ajax({
+            url: '${pageContext.request.contextPath}/vendortools/printBarcode',
+            type: 'GET',
+            dataType: 'json',  
+            success: function(response) {
+                if (response.barcode) {
+                    $('#barCodeNumber').val(response.barcode);  
+                    $('#barcodeValue').text(response.barcode); 
+                    $('#generateBarcode').hide();
+                    // $('#invoiceScanningForm').show(); 
+                } else {
+                    alert('Failed to generate barcode');
+                }
+            },
+            error: function() {
+                alert('Error fetching barcode');
+            }
+        });
+    });
+});
+</script>
