@@ -1,0 +1,310 @@
+I am facing an issue where the selected present date is taken as past in dev enviroment, but I do not face this issue on running it local 
+
+jsp page 
+<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+
+<div class="container-fluid py-4 font-small">
+    <h4>TPH Invoice Scanning</h4>
+    <div class="border-bottom my-5"></div>
+
+<div class="form-group">
+<form id="invoiceScanningForm" class="uri_form"  method="post" >
+
+    
+        <div class="row">
+            <label class="col-3" for="shd-be-same">Bar Code Number&nbsp;&nbsp;</label>
+            <input class="col-3 form-control rsi-input" type="text" name="barCodeNumber" 
+               id="barCodeNumber" maxlength="20" disabled> &nbsp;&nbsp; 
+            <button type="button" class="btn rsibtn-orange btn-sm" id="generateBarcode" >Generate</button>
+        </div>
+
+        <div id="invoicescanningform" style="display: none;">
+
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Invoice Date&nbsp;</label>
+                <input class="col-3 form-control rsi-input" type="date" name="invoiceDate" id="invoiceDate" required>
+            </div>    
+            
+            <div class="row">
+                <label class="col-3" for="shd-be-same" >Hauler Name&nbsp;&nbsp;</label>
+                <select class="form-control rsi-input col-3" name="hauler" id="getHaulerNames" required>
+                    <option value=""></option>
+                    <c:forEach var="vendor" items="${haulers }">
+                        <option value="${vendor.vendorType}|${vendor.vendorSubType}"><c:out value="${vendor.vendorName}" escapeXml="false"/></option>
+                    </c:forEach>	
+               </select>      
+
+            </div>
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Hauler Account Number&nbsp;</label>
+                <select class="col-3 form-control rsi-input" type="Number" name="haulerAccountNumber" id="haulerAccountNumber" required>
+                    <option value="">Select Account</option>
+                    </select>
+            </div>
+
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Invoice Number&nbsp;&nbsp;</label>
+                <input class="col-3 form-control rsi-input"type="Number" name="invoiceNumber" id="invoiceNumber" required>
+            </div>
+
+            <div class="row">
+                <label class="col-3" for="shd-be-same">Current Invoice Amount $&nbsp;</label>
+                <input class="col-3 form-control rsi-input"type="Number" name="currentInvoiceAmount" id="currentInvoiceAmount" required>
+            </div>
+            
+            <div class="row">
+                <input type="hidden" name="update" id="update" value="U"/>
+                <input type="hidden" name="rowId" id="rowId" value=" "/>
+                <input type="hidden" name="backLogStat" id="backLogStat" value=" "/>
+            </div>
+            
+            <div class="row my-5">
+                <div class="col-sm-1">
+                    <input type="submit" class="btn rsibtn-orange btn-sm" value="Submit "/>
+                </div>
+                <div class="col-sm-1">
+                    <input type="reset" class="btn rsibtn-orange btn-sm" value="Clear form " onclick="location.reload()" onKeyDown="return false;"/>
+                </div>
+            </div>
+        </div>
+	</form>
+</div>
+
+
+<div class="toast bg-success text-white" id="successToast" role="alert" aria-live="assertive" aria-atomic="true" data-autohide="true" data-delay="3000" style="position: absolute; top: 80px; right: 10px; width: 450px;">
+
+    <div class="toast-body">
+      TPH  Invoice submitted successfully!
+    </div>
+</div>
+
+<div class="toast bg-danger text-white" id="errorTextBlock" role="alert" aria-live="assertive" aria-atomic="true" data-autohide="true" data-delay="3000" style="position: absolute; top: 80px; right: 10px; width: 450px;">
+    <div class="toast-body">
+    </div>
+</div>
+</div>
+
+<script src="${pageContext.request.contextPath}/static/js/jquery.chained.remote.min.js?34dsf5987"></script>
+
+<script>
+$(document).ready(function() {
+    $('#generateBarcode').click(function(event) {
+        $('.busyModal').modal('show');
+        event.preventDefault();
+        
+        $.ajax({
+            url: '${pageContext.request.contextPath}/vendortools/printbarcode',
+            type: 'GET',
+            dataType: 'json',  
+            success: function(response) {
+                if (response.barcode) {
+                    $('#barCodeNumber').val(response.barcode);  
+                    $('#barcodeValue').text(response.barcode); 
+                    $('#generateBarcode').hide();
+                    $('.busyModal').modal('hide');
+                     $('#invoicescanningform').show(); 
+                } else {
+                    console.log('Failed to generate barcode');
+                }
+            },
+            error: function() {
+                console.log('Error fetching barcode');
+            }
+        });
+    });
+
+
+    $('#getHaulerNames').change(function() {
+        var selectedValue = $(this).val();
+        var vendorData = selectedValue.split("|"); 
+        var vendorType = vendorData[0];
+        var vendorSubType = vendorData[1];
+
+        console.log("Vendor Type:", vendorType);
+        console.log("Vendor Sub Type:", vendorSubType);
+        $('.busyModal').modal('show');
+
+        $.ajax({
+            url: '${pageContext.request.contextPath}/vendortools/gethauleraccounts',
+            type: 'POST',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({
+                vendorType: vendorType,
+                vendorSubType: vendorSubType
+            }),
+            success: function(response) {
+    console.log("Full response received:", response);
+
+    $('#haulerAccountNumber').empty();
+    $('#haulerAccountNumber').append('<option value="">Select Account</option>');
+
+    if (Array.isArray(response) && response.length > 0 && typeof response[0] === "string") {
+        let parsedResponse = JSON.parse(response[0]);
+        if (parsedResponse.haulerAccounts) {
+            console.log("Parsed Accounts:", parsedResponse.haulerAccounts);
+            $.each(parsedResponse.haulerAccounts, function(index, account) {
+                $('#haulerAccountNumber').append('<option value="' + account + '">' + account + '</option>');
+            });
+        } else {
+            console.warn("haulerAccounts key not found.");
+            $('#haulerAccountNumber').append('<option value="">No accounts available</option>');
+        }
+    } else {
+        console.warn("Invalid response format.");
+        $('#haulerAccountNumber').append('<option value="">No accounts available</option>');
+    }
+    $('.busyModal').modal('hide');
+
+}
+        });
+    });
+
+$("#invoiceScanningForm").submit(function(event) {
+    $('.busyModal').modal('show');
+    event.preventDefault();
+    $(this).find('input[type="submit"]').prop('disabled', true);
+    let currentInvoiceAmount = parseFloat($("#currentInvoiceAmount").val()).toFixed(2);
+    let invoiceData = {
+        vendorInvoiceDate: $("#invoiceDate").val(),
+        haulerAccount : $("#haulerAccountNumber").val(),
+        vendorInvoiceNumber : $("#invoiceNumber").val(),
+            vendorInvoiceAmount : currentInvoiceAmount,
+            barCode : $("#barCodeNumber").val(),
+            vendorNumber: $("#getHaulerNames").find(":selected").val().split("|")[0],
+            addressType: $("#getHaulerNames").find(":selected").val().split("|")[1],
+            edtUpd: $("#update").val(),
+            rowId: $("#rowId").val(),
+            backlogStatusCode:$("#backLogStat").val(),
+    };
+
+    $.ajax({
+        url: '${pageContext.request.contextPath}/vendortools/submitinvoice',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(invoiceData),
+        success: function(response) {
+           console.log("Response from server:", response);
+           $("#successToast").toast("show");
+           $('.busyModal').modal('hide');
+            setTimeout(function() {
+                $("#successToast").toast("hide");
+            }, 3000); 
+            $('#invoiceScanningForm').trigger("reset");
+            $('#invoicescanningform').hide(); 
+            $('#generateBarcode').show();
+            $("#invoiceScanningForm").find('input[type="submit"]').prop('disabled', false);
+           setTimeout(function() {
+                    location.reload();
+                }, 3000); 
+        },
+        error: function(response) {
+            let errorMessage =  response.responseJSON?.errorText || "Unknown error occurred";
+            $('#errorTextBlock .toast-body').text(errorMessage);
+             $("#errorTextBlock").toast("show");
+            console.log("Error submitting invoice: " + errorMessage);
+            $("#invoiceScanningForm").find('input[type="submit"]').prop('disabled', false);
+            $('.busyModal').modal('hide');
+        }
+    });
+    $('.busyModal').modal('hide');
+
+});
+
+
+});
+</script>
+
+controller 
+
+
+@Controller
+@PreAuthorize("hasAuthority(T(com.repsrv.tph2.cbs.authorization.CbsPointers).VENDOR_TOOLS)")
+@RequestMapping("/vendortools")
+public class VendorToolsController {
+
+	@Autowired
+	private VendorToolsService vendorToolsService ;
+	@RequestMapping(value = "/submitinvoice", method = {RequestMethod.GET, RequestMethod.POST})
+	public ResponseEntity<?> submitInvoice(@RequestBody InvoiceScanning invoiceData) {
+        try {
+            List<InvoiceScanning> result = vendorToolsService.submitInvoice(invoiceData);
+
+            if (!result.isEmpty()) {
+                InvoiceScanning submittedInvoice = result.get(0);
+                return ResponseEntity.ok(submittedInvoice); 
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Collections.singletonMap("errorText", "Something bad happended. Please try again."));
+            }
+
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("errorText", ex.getMessage()));
+        }
+    }
+	
+}
+
+service 
+@Service("vendorToolsService")
+public class VendorToolsService {
+	@Autowired
+	private VendorToolsDao vendorToolsDao;
+	
+public List<InvoiceScanning> submitInvoice(InvoiceScanning searchRequest){
+		String user = SecurityUtils.getLoggedInUser();
+		searchRequest.setUser(user);
+		VendorToolsSubmitRequest request = new VendorToolsSubmitRequest(TPHAction.ADD, user, searchRequest);
+		List<InvoiceScanning> result = this.vendorToolsDao.doSubmitInvoiceScanning(request);
+
+		if (result != null && !result.isEmpty()) {
+			String errorText = result.get(0).getErrorText();
+			String status = request.getResultStatus();
+
+			if ("I".equalsIgnoreCase(status)) {
+				result.get(0).setErrorText(null); 
+			} else {
+				throw new InvoiceSubmissionException(errorText != null ? errorText : "Unknown error");
+			}
+		}			
+		return result;
+	}
+
+
+mapper file
+
+	<select id="doSubmitInvoiceScanning" statementType="CALLABLE" useCache="false" resultMap="invoiceScanningMap">
+		{CALL  edtScnInv( 
+			#{request.searchRequest.vendorInvoiceNumber,jdbcType=CHAR},
+			#{request.searchRequest.vendorInvoiceDate,jdbcType=DATE},  
+			#{request.searchRequest.vendorNumber,jdbcType=CHAR},
+			#{request.searchRequest.addressType,jdbcType=CHAR},
+			#{request.searchRequest.haulerAccount,jdbcType=CHAR},
+			#{request.searchRequest.barCode,jdbcType=CHAR},
+			#{request.searchRequest.vendorInvoiceAmount,jdbcType=DECIMAL},
+			#{request.searchRequest.rowId,jdbcType=CHAR},
+			#{request.searchRequest.edtUpd,jdbcType=CHAR},
+			#{request.searchRequest.user,jdbcType=CHAR},
+			#{request.searchRequest.backlogStatusCode,jdbcType=CHAR},
+	         #{request.resultStatus,jdbcType=CHAR,mode=OUT},
+		   #{request.resultSqlState,jdbcType=CHAR,mode=OUT},
+  	        #{request.resultSqlCode,jdbcType=INTEGER,mode=OUT})}
+	</select>
+
+	<resultMap id="invoiceScanningMap" type="com.repsrv.tph2.model.InvoiceScanning">
+	<result column="HIINVH" javaType="string" property="vendorInvoiceNumber" />
+	<result column="HIINVD" javaType="DATE" property="vendorInvoiceDate" />
+	<result column="HIVEND" javaType="string" property="vendorNumber" />
+	<result column="HISTYP" javaType="string" property="addressType" />
+	<result column="HIHACT" javaType="string" property="haulerAccount" />
+	<result column="HIBARCD" javaType="string" property="barCode" />
+	<result column="HITAMT" javaType="DECIMAL" property="vendorInvoiceAmount" />
+	<result column="Rowid" javaType="string" property="rowId"/>
+	<result column="EdtUpd" javaType="string" property="edtUpd"/>
+	<result column="User" javaType="string" property="user"/>
+	<result column="BCKSTS" javaType="string" property="backlogStatusCode"/>
+	<result column="ERRORTEXT" javaType="string" property="errorText"/>
+	</resultMap>
+</mapper>
